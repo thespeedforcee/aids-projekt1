@@ -4,11 +4,70 @@
 #include <ctime>
 #include <stack>
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <chrono>
 
 using namespace std;
 
 long long porownania = 0;
 long long zamiany = 0;
+
+//generatory
+
+vector<int> Generatorlosowe(int n){
+	vector<int> tab(n);
+	for (int i = 0; i < n; i++){
+		tab[i] = rand()%100000;
+	}
+	return tab;
+}
+
+vector<int> GeneratorR(int n){
+	vector<int> tab = Generatorlosowe(n);
+	sort(tab.begin(), tab.end());
+	return tab;
+}
+
+vector<int> GeneratorM(int n){
+	vector<int> tab = Generatorlosowe(n);
+	sort(tab.begin(), tab.end(), greater<int>());
+	return tab;
+}
+
+vector<int> GeneratorA(int n){
+	vector<int> tab = Generatorlosowe(n);
+	sort(tab.begin(), tab.end());
+	vector<int> tab2(n);
+	int lewa = 0, prawa = n - 1;
+	for (int i = 0; i < n; i++){
+		if (i%2 == 0){
+			tab2[lewa++] = tab[i];
+		}
+		else {
+			tab2[prawa--] = tab[i];
+		}
+	}
+	return tab2;
+}
+
+vector<int> GeneratorV(int n){
+	vector<int> tab = Generatorlosowe(n);
+	sort(tab.begin(), tab.end(), greater<int>());
+	vector<int> tab2(n);
+	int lewa = 0, prawa = n - 1;
+	for (int i = 0; i < n; i++){
+		if (i%2 == 0){
+			tab2[lewa++] = tab[i];
+		}
+		else {
+			tab2[prawa--] = tab[i];
+		}
+	}
+	return tab2;
+}
+
+//algorytmy
 
 void shellSortKnuth(vector<int>& arr) {
     int n = arr.size();
@@ -61,7 +120,8 @@ int partition(vector<int>& tab, int low, int high, bool demo){
     return i;
 }
 
-void quicksortiter(vector<int>& tab, int n){
+void quicksortiter(vector<int>& tab){
+	int n = tab.size();
     if (n < 2) return;
     bool demo = (n <= 12);
     stack<int> s;
@@ -124,56 +184,75 @@ void wyswietl(const vector<int>& arr) {
     cout << endl;
 }
 
-void uruchomSortowanie(string nazwa, void (*sortFunc)(vector<int>&), vector<int> dane) {
-    porownania = 0;
-    zamiany = 0;
-    int n = dane.size();
+void wykonajEksperyment(string nazwaAlg, int typAlg, vector<int> n_values, string nazwaTypuDanych) {
+    cout << "\n" << nazwaAlg << " dla danych: " << nazwaTypuDanych << endl;
+    cout << "n\tSredni Czas [s]\tOdchylenie Std." << endl;
 
-    if (n <= 12) {
-        cout << "\n" << nazwa << " tryb demonstracyjny"<< endl;
-        cout << "Wejscie: "; wyswietl(dane);
+    for (int n : n_values) {
+        vector<double> czasy;
+        for (int proba = 0; proba < 10; proba++) {
+            vector<int> dane;
+
+            if (nazwaTypuDanych == "Losowe") dane = Generatorlosowe(n);
+            else if (nazwaTypuDanych == "Rosnace") dane = GeneratorR(n);
+            else if (nazwaTypuDanych == "Malejace") dane = GeneratorM(n);
+            else if (nazwaTypuDanych == "A-ksztaltne") dane = GeneratorA(n);
+            else dane = GeneratorV(n);
+
+            porownania = 0; zamiany = 0;
+
+            auto start = chrono::high_resolution_clock::now();
+            
+            if (typAlg == 1) shellSortKnuth(dane);
+            else if (typAlg == 2) heapSort(dane);
+            else if (typAlg == 3) quicksortiter(dane);
+
+            auto stop = chrono::high_resolution_clock::now();
+            chrono::duration<double> diff = stop - start;
+            czasy.push_back(diff.count());
+        }
+
+        double suma = 0;
+        for (double t : czasy) suma += t;
+        double srednia = suma / 10.0;
+
+        double wariancja = 0;
+        for (double t : czasy) wariancja += pow(t - srednia, 2);
+        double odchylenie = sqrt(wariancja / 10.0);
+
+        cout << n << "\t" << fixed << setprecision(8) << srednia << "\t" << odchylenie << endl;
     }
-
-    clock_t start = clock();
-    sortFunc(dane);
-    clock_t stop = clock();
-
-    if (n <= 12) {
-        cout << "Wyjscie: "; wyswietl(dane);
-    }
-
-    cout << nazwa << " Czas: " << (double)(stop - start) / CLOCKS_PER_SEC 
-         << "s, Porownania: " << porownania << ", Zamiany: " << zamiany << endl;
-}
-
-void qsort_wrapper(vector<int>& arr) {
-    quicksortiter(arr, arr.size());
 }
 
 int main() {
-    system("chcp 1250");
+	system("chcp 1250");
     srand(time(NULL));
+    
+    vector<int> n_liniowe = {1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
+    vector<int> n_wykladnicze = {1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000};
 
-    int n;
-    cout << "Podaj liczbe elementow n: ";
-    cin >> n;
+	string nazwyAlgorytmow[] = {
+        "Shell Sort", "Heap Sort", "Quick Sort Iteracyjny"
+    };
 
-    vector<int> dane_wejsciowe;
-    if (n <= 12) {
-        for (int i = 0; i < n; i++) {
-            int liczba;
-            cout << "Podaj liczbe " << i + 1 << ": ";
-            cin >> liczba;
-            dane_wejsciowe.push_back(liczba);
+    string typyDanych[] = {
+        "Losowe", "Rosnace", "Malejace", "A-ksztaltne", "V-ksztaltne"
+    };
+	
+	//wzrosty liniowe   
+    for (int alg = 1; alg <= 3; alg++) {
+        for (const string& typ : typyDanych) {
+            wykonajEksperyment(nazwyAlgorytmow[alg-1], alg, n_liniowe, typ);
         }
-    } else {
-        for (int i = 0; i < n; i++) dane_wejsciowe.push_back(rand() % 1000);
-        cout << "Wygenerowano " << n << " losowych liczb." << endl;
     }
 
-    uruchomSortowanie("Shell Sort", shellSortKnuth, dane_wejsciowe);
-    uruchomSortowanie("Quick Sort Iteracyjny", qsort_wrapper, dane_wejsciowe);
-    uruchomSortowanie("Heap Sort", heapSort, dane_wejsciowe);
+    //wykladnicze
+    for (int alg = 1; alg <= 3; alg++) {
+        for (const string& typ : typyDanych) {
+            wykonajEksperyment(nazwyAlgorytmow[alg-1], alg, n_wykladnicze, typ);
+        }
+    }
 
+    cout << "\nKoniec pomiarow." << endl;
     return 0;
 }

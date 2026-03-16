@@ -67,13 +67,13 @@ void quicksort(vector<int> & v, int left, int right,int &ilepor,int &ilezam,bool
     while(i <= j)
     {
         ilepor++;
-        while(v[i] > p){
+        while(i <= right && v[i] > p){
             i++;
             ilepor++;
         }
 
         ilepor++;
-        while(v[j] < p){
+        while(j>=left && v[j] < p){
             j--;
             ilepor++;
         }
@@ -109,6 +109,11 @@ int main(){
         cout<<"Podaj ilosc elementow: "<<endl;
         int n,a;
         cin>>n;
+        if(n <= 0)
+        {
+            cout<<"Niepoprawna liczba elementow"<<endl;
+            return 0;
+        }
         for(int i=0;i<n;i++)
         {
             cin>>a;
